@@ -1,0 +1,235 @@
+import java.awt.Color;
+import java.awt.MouseInfo;
+//import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.widgets.Canvas;
+
+
+public class Main {
+
+	protected Shell shell;
+	Display display = new Display();
+	public boolean isRed;
+	public boolean isPressed;
+	public boolean redDelete;
+	public boolean blueDelete;
+	
+	Canvas canvas;
+	List<Point> redPoints = new ArrayList<Point>();
+	List<Point> bluePoints = new ArrayList<Point>();
+	
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			Main window = new Main();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		
+	}
+
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			drawLine();
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+		
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	private void createContents() {
+		shell = new Shell();
+		shell.setSize(450, 300);
+		shell.setText("SWT Application");
+		
+		Button btnFreeHand = new Button(shell, SWT.NONE);
+		btnFreeHand.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+			}
+		});
+		btnFreeHand.setBounds(10, 80, 75, 25);
+		btnFreeHand.setText("Freehand");
+		
+		Button btnEquation = new Button(shell, SWT.NONE);
+		btnEquation.setText("Equation");
+		btnEquation.setBounds(10, 111, 75, 25);
+		
+		Button btnGrid = new Button(shell, SWT.NONE);
+		btnGrid.setText("Grid");
+		btnGrid.setBounds(10, 142, 75, 25);
+		
+		Button btnRed = new Button(shell, SWT.NONE);
+		btnRed.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				isRed = true;
+			}
+		});
+		btnRed.setText("Red");
+		btnRed.setBounds(179, 226, 75, 25);
+		
+		Button btnBlue = new Button(shell, SWT.NONE);
+		btnBlue.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				isRed = false;
+			}
+		});
+		btnBlue.setText("Blue");
+		btnBlue.setBounds(260, 226, 75, 25);
+		
+		Button btnSave = new Button(shell, SWT.NONE);
+		btnSave.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+			}
+		});
+		btnSave.setText("Save");
+		btnSave.setBounds(349, 10, 75, 25);
+		
+		Button btnLoad = new Button(shell, SWT.NONE);
+		btnLoad.setText("Load");
+		btnLoad.setBounds(349, 41, 75, 25);
+		
+		Button btnPlay = new Button(shell, SWT.NONE);
+		btnPlay.setText("Play");
+		btnPlay.setBounds(121, 10, 75, 25);
+		
+		Button btnStop = new Button(shell, SWT.NONE);
+		btnStop.setText("Stop");
+		btnStop.setBounds(202, 10, 75, 25);
+		
+		canvas = new Canvas(shell, SWT.BORDER);
+		canvas.setBounds(91, 80, 333, 139);
+		canvas.addMouseListener(new MouseListener() {
+
+			public void mouseDoubleClick(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			public void mouseDown(MouseEvent e) {
+				// TODO Auto-generated method stub
+				isPressed = true;
+			}
+
+			public void mouseUp(MouseEvent e) {
+				// TODO Auto-generated method stub
+				isPressed = false;
+				redDelete = true;
+				blueDelete = true;
+			}
+			
+		});
+		
+	    // Add a handler to do the drawing
+	    canvas.addPaintListener(new PaintListener() {
+	    
+	      public void paintControl(PaintEvent e) {
+	    	 GC fill = new GC(canvas);
+	  		fill.setForeground(display.getSystemColor(SWT.COLOR_GRAY));
+	  		fill.drawLine(canvas.getBounds().width /2, 0, canvas.getBounds().width /2, 10000);
+	  		fill.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
+	  		fill.drawLine(0, canvas.getBounds().height /2, 10000, canvas.getBounds().height/2);
+	      }
+	    });
+		
+	    //drawLine();
+	}
+	public void drawLine() {
+		if (!isPressed) {return;}
+		if (isRed) {
+			if (redDelete) {
+				redPoints.clear();
+				redDelete = false;
+				GC fill = new GC(canvas);
+				fill.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				fill.fillRectangle(0, 0, canvas.getBounds().width /2, canvas.getBounds().height);
+			
+			}
+			redPoints.add(canvas.toControl(display.getCursorLocation()));
+			if (redPoints.size() > 1) {
+				if(redPoints.get(redPoints.size()-1).x < redPoints.get(redPoints.size()-2).x) {
+					redPoints.get(redPoints.size()-1).x = redPoints.get(redPoints.size()-2).x;
+				}
+				if (redPoints.get(redPoints.size()-1).x > canvas.getBounds().width /2) {
+					redPoints.get(redPoints.size()-1).x = canvas.getBounds().width /2;
+				}
+			}
+			if (redPoints.get(0).x > canvas.getBounds().width /2) {
+				redPoints.get(0).x = canvas.getBounds().width /2;
+			}
+		}
+		else {
+			if (blueDelete) {
+				bluePoints.clear();
+				blueDelete = false;
+				GC fill = new GC(canvas);
+				fill.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				fill.fillRectangle(canvas.getBounds().width /2, 0, 1000, 1000);
+				
+			}
+			bluePoints.add(canvas.toControl(display.getCursorLocation()));
+			if (bluePoints.size() > 1) {
+				if(bluePoints.get(bluePoints.size()-1).x < bluePoints.get(bluePoints.size()-2).x) {
+					bluePoints.get(bluePoints.size()-1).x = bluePoints.get(bluePoints.size()-2).x;
+				}
+				if (bluePoints.get(bluePoints.size()-1).x < canvas.getBounds().width /2) {
+					bluePoints.get(bluePoints.size()-1).x = canvas.getBounds().width /2;
+				}
+			}
+			if (bluePoints.get(0).x < canvas.getBounds().width /2) {
+				bluePoints.get(0).x = canvas.getBounds().width /2;
+			}
+		}
+		
+	
+	}
+	public void renderLine(Point [] redPoints, Point [] bluePoints) {
+		GC gc = new GC(canvas);
+		gc.setForeground(display.getSystemColor(SWT.COLOR_RED));
+		for (int i = 1; i < redPoints.length; i++) {			
+			gc.drawLine(redPoints[i-1].x, redPoints[i-1].y, redPoints[i].x, redPoints[i].y);
+			//gc.drawLine(30,30,50,50);
+		}
+		
+		gc.setForeground(display.getSystemColor(SWT.COLOR_BLUE));
+		for (int i = 1; i < bluePoints.size(); i++) {			
+			gc.drawLine(bluePoints.get(i-1).x, bluePoints.get(i-1).y, bluePoints.get(i).x, bluePoints.get(i).y);
+			//gc.drawLine(30,30,50,50);
+		}
+		
+		GC fill = new GC(canvas);
+		fill.setForeground(display.getSystemColor(SWT.COLOR_GRAY));
+		fill.drawLine(canvas.getBounds().width /2, 0, canvas.getBounds().width /2, 10000);
+		fill.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
+  		fill.drawLine(0, canvas.getBounds().height /2, 10000, canvas.getBounds().height/2);
+	}
+}

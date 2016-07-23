@@ -1,0 +1,23 @@
+{
+  "C:\\Program Files\\Java\\jre1.8.0_65\\lib\\rt.jar": {
+    "coordinate": "jre:jre:zip:call:1.0.0",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_65\\lib\\rt.jar",
+    "status": "RESOLVED",
+    "error": "No class path info available for \u0027C:\\Program Files\\Java\\jre1.8.0_65\\lib\\rt.jar\u0027. Skipped."
+  },
+  "C:\\Users\\Adam\\Documents\\eclipse shit\\eclipse\\plugins\\org.eclipse.swt.win32.win32.x86_64_3.102.1.v20140206-1358.jar": {
+    "coordinate": "org.eclipse.swt:org.eclipse.swt.win32.win32.x86_64:zip:call:3.0.0",
+    "location": "C:\\Users\\Adam\\Documents\\eclipse shit\\eclipse\\plugins\\org.eclipse.swt.win32.win32.x86_64_3.102.1.v20140206-1358.jar",
+    "status": "RESOLVED"
+  },
+  "C:\\Users\\Adam\\Documents\\SPH 4U Culm\\Culminating activity\\src": {
+    "location": "C:\\Users\\Adam\\Documents\\SPH 4U Culm\\Culminating activity\\src",
+    "status": "UNRESOLVED",
+    "error": "No class path info available for \u0027C:\\Users\\Adam\\Documents\\SPH 4U Culm\\Culminating activity\\src\u0027. Skipped."
+  },
+  "C:\\Users\\Adam\\Documents\\eclipse shit\\eclipse\\plugins\\org.eclipse.text_3.5.300.v20130515-1451.jar": {
+    "coordinate": "org.eclipse.text:org.eclipse.text:zip:call:3.0.0",
+    "location": "C:\\Users\\Adam\\Documents\\eclipse shit\\eclipse\\plugins\\org.eclipse.text_3.5.300.v20130515-1451.jar",
+    "status": "RESOLVED"
+  }
+}

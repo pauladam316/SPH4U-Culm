@@ -1,0 +1,815 @@
+package culm;
+import java.awt.Color;
+
+import org.apache.commons.math.util.MathUtils;
+import org.eclipse.swt.graphics.*;
+
+import java.awt.MouseInfo;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+//import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Scale;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.wb.swt.SWTResourceManager;
+import org.eclipse.swt.widgets.Label;
+
+
+public class Main {
+
+	protected Shell shell;
+	Display display = new Display();
+	public boolean isRed;
+	public boolean isPressed;
+	public boolean redDelete;
+	public boolean blueDelete;
+	public boolean isMoving;
+	public boolean isPaused;
+	Canvas canvas;
+	List<Point> redPoints = new ArrayList<Point>();
+	List<Point> bluePoints = new ArrayList<Point>();
+	List<Point> interference = new ArrayList<Point>();
+	Scale scale;
+	Scale scale2;
+	public int sliderValue;
+	private Text redPer;
+	private Text redVert;
+	private Text redHor;
+	private Text redAmp;
+	public int drawMode;
+	private Text bluePer;
+	private Text blueVert;
+	private Text blueHor;
+	private Text blueAmp;
+	Composite redBox;
+	Composite blueBox;
+	Button btnFreehand;
+	Button btnEquation;
+	Button btnGrid;
+	private Label lblTime;
+	public boolean redTrack = true;
+	public boolean blueTrack = true;
+	
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			Main window = new Main();
+			window.open();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		
+	}
+
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shell.open();
+		shell.layout();
+		while (!shell.isDisposed()) {
+			if (drawMode == 0) {
+				drawLine();
+				redBox.setVisible(false);
+				blueBox.setVisible(false);
+			}
+			else if (drawMode == 1) {
+				drawEquation();
+				 if (!isPaused && !isMoving) {
+					 redBox.setVisible(true);
+					 blueBox.setVisible(true);
+				 }
+				 else {
+					 redBox.setVisible(false);
+					 blueBox.setVisible(false);
+				 }
+			}
+			if (drawMode == 2) {
+				drawLine();
+				redBox.setVisible(false);
+				blueBox.setVisible(false);
+			}
+			canvas.redraw();
+			canvas.update();
+			sliderChecker();
+			if (!display.readAndDispatch()) {
+				//display.sleep();
+			}
+		}
+		
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	private void createContents() {
+		
+		isRed = true;
+		
+		shell = new Shell();
+		shell.setSize(930, 646);
+		shell.setText("SWT Application");
+		
+		Button btnSave = new Button(shell, SWT.NONE);
+		btnSave.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				JFileChooser saveFile = new JFileChooser();
+				FileNameExtensionFilter filter = new FileNameExtensionFilter("TEXT FILES", "txt", "text");
+				saveFile.setFileFilter(filter);
+				int userSelection = saveFile.showSaveDialog(null);
+				
+				if (userSelection == JFileChooser.APPROVE_OPTION) {
+					File selectedFile = saveFile.getSelectedFile();
+
+			        try {
+			            String fileName = selectedFile.getCanonicalPath();
+			            if (!fileName.endsWith(".txt")) {
+			                selectedFile = new File(fileName + ".txt");
+			            }
+			            PrintWriter out = new PrintWriter(selectedFile);
+			            for (int i = 0; i < redPoints.size(); i++ ) {
+			            	out.println(redPoints.get(i).x);
+			            	out.println(redPoints.get(i).y);
+			            }
+			            out.println("-");
+			            for (int i = 0; i < bluePoints.size(); i++ ) {
+			            	out.println(bluePoints.get(i).x);
+			            	out.println(bluePoints.get(i).y);
+			            }
+			            out.println("-");
+			            for (int i = 0; i < interference.size(); i++ ) {
+			            	out.println(interference.get(i).x);
+			            	out.println(bluePoints.get(i).y);
+			            }
+			            out.println("-");
+			            out.println(scale2.getSelection());
+			            out.close();
+			            
+			        } catch (IOException e1) {
+			            e1.printStackTrace();
+			        }
+				}				
+			}
+		});
+		btnSave.setText("Save");
+		btnSave.setBounds(822, 10, 75, 25);
+		
+		Button btnLoad = new Button(shell, SWT.NONE);
+		btnLoad.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				JFileChooser loadFile = new JFileChooser();
+				FileNameExtensionFilter filter = new FileNameExtensionFilter("TEXT FILES", "txt", "text");
+				loadFile.setFileFilter(filter);
+				int userSelection = loadFile.showSaveDialog(null);
+				
+				if (userSelection == JFileChooser.APPROVE_OPTION) {
+					File selectedFile = loadFile.getSelectedFile();
+
+		           // String fileName = selectedFile.getCanonicalPath();
+		           
+		            try {
+		            	
+		            	BufferedReader br = new BufferedReader(new FileReader(selectedFile.getCanonicalPath()));
+		            	
+		            	redPoints.clear();
+		            	while (true) {
+		            		String line = br.readLine();
+		            		if (line.equals("-")) {
+		            			break;
+		            		}
+		            		else {
+		            			redPoints.add(new Point(Integer.parseInt(line),(Integer.parseInt(br.readLine()))));		            		
+		            		}
+	            		}
+		            	bluePoints.clear();
+		            	while (true) {
+		            		String line = br.readLine();
+		            		if (line.equals("-")) {
+		            			break;
+		            		}
+		            		else {
+		            			bluePoints.add(new Point(Integer.parseInt(line),(Integer.parseInt(br.readLine()))));		            		
+		            		}
+	            		}
+		            	interference.clear();
+		            	while (true) {
+		            		String line = br.readLine();
+		            		if (line.equals("-")) {
+		            			break;
+		            		}
+		            		else {
+		            			interference.add(new Point(Integer.parseInt(line),(Integer.parseInt(br.readLine()))));		            		
+		            		}
+	            		}
+		            	scale2.setSelection(Integer.parseInt(br.readLine()));
+		            	sliderValue = scale2.getSelection();
+		            	br.close();
+		                
+		            } catch (IOException e2) {
+		                
+		            }
+		            canvas.redraw();
+		            canvas.update();
+				}				
+			}
+		});
+		btnLoad.setText("Load");
+		btnLoad.setBounds(822, 41, 75, 25);
+		
+		Button btnPlay = new Button(shell, SWT.NONE);
+		btnPlay.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				isMoving = true;
+			}
+		});
+		btnPlay.setText("Play");
+		btnPlay.setBounds(414, 28, 75, 25);
+		
+		Button btnStop = new Button(shell, SWT.NONE);
+		btnStop.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				isMoving = false;
+				isPaused = true;
+			}
+		});
+		btnStop.setText("Stop");
+		btnStop.setBounds(495, 28, 75, 25);
+		
+		canvas = new Canvas(shell, SWT.BORDER | SWT.DOUBLE_BUFFERED );//| SWT.DOUBLE_BUFFERED);
+		canvas.setLocation(147, 72);
+		canvas.setSize(612, 334);
+		canvas.addPaintListener(new PaintListener() {
+            public void paintControl(PaintEvent e) {
+            	
+            	Point [] redArray = redPoints.toArray(new Point[redPoints.size()]);
+            	Point [] blueArray = bluePoints.toArray(new Point[bluePoints.size()]);
+            	Point [] interferenceArray = interference.toArray(new Point[interference.size()]);
+              	
+        		//GC gc2 = new GC(canvas_1);
+            	e.gc.setForeground(display.getSystemColor(SWT.COLOR_GRAY));
+            	 e.gc.drawLine(canvas.getBounds().width /2, 0, canvas.getBounds().width /2, 10000);
+            	 e.gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
+            	 e.gc.drawLine(0, canvas.getBounds().height /2, 10000, canvas.getBounds().height/2);
+        		
+            	 e.gc.setForeground(display.getSystemColor(SWT.COLOR_RED));
+            	 e.gc.setLineWidth(3);
+            	 
+        		for (int i = 1; i < redArray.length; i++) {		
+        			e.gc.fillOval(redArray[i].x,redArray[i].y, 80,80); 
+        			//e.gc.drawLine(redArray[i-1].x, redArray[i-1].y, redArray[i].x, redArray[i].y);
+        			//gc.drawLine(30,30,50,50);
+        		}
+        		
+        		 e.gc.setForeground(display.getSystemColor(SWT.COLOR_BLUE));
+        		for (int i = 1; i < blueArray.length; i++) {	
+        			
+        			 e.gc.drawLine(blueArray[i-1].x, blueArray[i-1].y, blueArray[i].x, blueArray[i].y);
+        			//gc.drawLine(30,30,50,50);
+        		}
+        		if (interferenceArray != null && interferenceArray.length > 1) {
+        			 e.gc.setForeground(display.getSystemColor(SWT.COLOR_GREEN));
+        			for (int i = 1; i < interferenceArray.length; i++) {	
+        				if (interferenceArray[i] != null) {
+        					 e.gc.drawLine(interferenceArray[i-1].x, interferenceArray[i-1].y, interferenceArray[i].x, interferenceArray[i].y);
+        				}
+        			}
+        		}
+        		//gc2.drawImage(bufferImage,0,0); 
+        		 e.gc.dispose();
+        		//bufferImage.dispose(); 
+            }
+          });
+		canvas.addMouseListener(new MouseListener() {
+
+			public void mouseDoubleClick(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			public void mouseDown(MouseEvent e) {
+				// TODO Auto-generated method stub
+				isPressed = true;
+			}
+
+			public void mouseUp(MouseEvent e) {
+				// TODO Auto-generated method stub
+				isPressed = false;
+				//redDelete = true;
+				//blueDelete = true;
+			}
+			
+		});
+		canvas.addKeyListener( new KeyAdapter() {
+		    @Override
+		    public void keyPressed( KeyEvent e ) {
+		    	redDelete = true;
+		    	blueDelete = true;
+		    }
+		});
+		Button btnReset = new Button(shell, SWT.NONE);
+		btnReset.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				redPoints.clear();
+				bluePoints.clear();
+				interference.clear();
+				canvas.redraw();
+				canvas.update();
+				scale2.setSelection(0);
+				sliderValue = 0;
+				isPaused = false;
+			}
+		});
+		btnReset.setBounds(333, 28, 75, 25);
+		btnReset.setText("Reset");
+		
+		scale = new Scale(shell, SWT.NONE);
+		scale.setMaximum(300);
+		scale.setSelection(10);
+		scale.setBounds(241, 444, 412, 42);
+		
+		Label lblSpeed = new Label(shell, SWT.CENTER);
+		lblSpeed.setBounds(414, 423, 55, 15);
+		lblSpeed.setText("Speed");
+		
+		scale2 = new Scale(shell, SWT.NONE);
+		scale2.setMaximum(1000);
+		scale2.setBounds(241, 532, 412, 42);
+		
+	    redBox = new Composite(shell, SWT.BORDER);
+		redBox.setBounds(10, 214, 132, 168);
+		redBox.setVisible(false);
+		
+		Label lblAmplitude = new Label(redBox, SWT.NONE);
+		lblAmplitude.setLocation(19, 10);
+		lblAmplitude.setSize(55, 15);
+		lblAmplitude.setAlignment(SWT.RIGHT);
+		lblAmplitude.setText("Amplitude");
+		
+		Label lblNewLabel = new Label(redBox, SWT.NONE);
+		lblNewLabel.setLocation(19, 44);
+		lblNewLabel.setSize(55, 15);
+		lblNewLabel.setAlignment(SWT.RIGHT);
+		lblNewLabel.setText("Period");
+		
+		Label lblVertical = new Label(redBox, SWT.NONE);
+		lblVertical.setLocation(3, 71);
+		lblVertical.setSize(75, 30);
+		lblVertical.setAlignment(SWT.RIGHT);
+		lblVertical.setText("Vertical\r\nDisplacement");
+		
+		redPer = new Text(redBox, SWT.BORDER);
+		redPer.setLocation(81, 41);
+		redPer.setSize(30, 21);
+		
+		redVert = new Text(redBox, SWT.BORDER);
+		redVert.setLocation(81, 75);
+		redVert.setSize(30, 21);
+		
+		redHor = new Text(redBox, SWT.BORDER);
+		redHor.setLocation(80, 110);
+		redHor.setSize(31, 21);
+		
+		Label lblHorizontal = new Label(redBox, SWT.NONE);
+		lblHorizontal.setLocation(-1, 107);
+		lblHorizontal.setSize(75, 49);
+		lblHorizontal.setAlignment(SWT.RIGHT);
+		lblHorizontal.setText("Horizontal\r\nDisplacement\r\n");
+		
+		redAmp = new Text(redBox, SWT.BORDER);
+		redAmp.setLocation(81, 10);
+		redAmp.setSize(30, 21);
+		
+		Label lblPi = new Label(redBox, SWT.NONE);
+		lblPi.setLocation(113, 36);
+		lblPi.setSize(21, 25);
+		lblPi.setFont(SWTResourceManager.getFont("Segoe UI", 14, SWT.NORMAL));
+		lblPi.setText("\u03C0");
+		
+		blueBox = new Composite(shell, SWT.BORDER);
+		blueBox.setBounds(765, 214, 132, 168);
+		blueBox.setVisible(false);
+		
+		Label label = new Label(blueBox, SWT.NONE);
+		label.setText("Amplitude");
+		label.setAlignment(SWT.RIGHT);
+		label.setBounds(19, 10, 55, 15);
+		
+		Label label_1 = new Label(blueBox, SWT.NONE);
+		label_1.setText("Period");
+		label_1.setAlignment(SWT.RIGHT);
+		label_1.setBounds(19, 44, 55, 15);
+		
+		Label label_2 = new Label(blueBox, SWT.NONE);
+		label_2.setText("Vertical\r\nDisplacement");
+		label_2.setAlignment(SWT.RIGHT);
+		label_2.setBounds(3, 71, 75, 30);
+		
+		bluePer = new Text(blueBox, SWT.BORDER);
+		bluePer.setBounds(81, 41, 30, 21);
+		
+		blueVert = new Text(blueBox, SWT.BORDER);
+		blueVert.setBounds(81, 75, 30, 21);
+		
+		blueHor = new Text(blueBox, SWT.BORDER);
+		blueHor.setBounds(80, 110, 31, 21);
+		
+		Label label_3 = new Label(blueBox, SWT.NONE);
+		label_3.setText("Horizontal\r\nDisplacement\r\n");
+		label_3.setAlignment(SWT.RIGHT);
+		label_3.setBounds(-1, 107, 75, 49);
+		
+		blueAmp = new Text(blueBox, SWT.BORDER);
+		blueAmp.setBounds(81, 10, 30, 21);
+		
+		Label label_4 = new Label(blueBox, SWT.NONE);
+		label_4.setText("\u03C0");
+		label_4.setFont(SWTResourceManager.getFont("Segoe UI", 14, SWT.NORMAL));
+		label_4.setBounds(113, 36, 21, 25);
+		
+		Composite composite = new Composite(shell, SWT.BORDER);
+		composite.setBounds(29, 72, 112, 136);
+		
+		btnFreehand = new Button(composite, SWT.RADIO);
+		btnFreehand.setSelection(true);
+		btnFreehand.setLocation(10, 20);
+		btnFreehand.setSize(90, 16);
+		btnFreehand.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				drawMode = 0;
+				bluePoints.clear();
+				redPoints.clear();
+				interference.clear();
+				isPaused = false;
+				isMoving = false;
+				btnEquation.setSelection(false);
+				btnGrid.setSelection(false);
+				btnFreehand.setSelection(true);
+			}
+		});
+		btnFreehand.setText("Freehand");
+		
+		btnEquation = new Button(composite, SWT.RADIO);
+		btnEquation.setLocation(10, 60);
+		btnEquation.setSize(90, 16);
+		btnEquation.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				drawMode = 1;
+				bluePoints.clear();
+				redPoints.clear();
+				interference.clear();
+				isPaused = false;
+				isMoving = false;
+				btnGrid.setSelection(false);
+				btnFreehand.setSelection(false);
+				btnEquation.setSelection(true);
+			}
+		});
+		btnEquation.setText("Equation");
+		
+		btnGrid = new Button(composite, SWT.RADIO);
+		btnGrid.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				btnFreehand.setSelection(false);
+				btnEquation.setSelection(false);
+				btnGrid.setSelection(true);
+				drawMode = 2;
+			}
+		});
+		btnGrid.setLocation(10, 99);
+		btnGrid.setSize(90, 16);
+		btnGrid.setText("Grid");
+		
+		lblTime = new Label(shell, SWT.CENTER);
+		lblTime.setText("Time");
+		lblTime.setBounds(414, 505, 55, 15);
+		
+	    //drawLine();
+	}
+	public void drawLine() {
+  		if (canvas.toControl(display.getCursorLocation()).x < canvas.getBounds().width/2) {
+  			isRed = true;
+  		}
+  		if (canvas.toControl(display.getCursorLocation()).x > canvas.getBounds().width/2) {
+  			isRed = false;
+  		}
+		if (isMoving) {
+			moveLines(redPoints.toArray(new Point[redPoints.size()]), bluePoints.toArray(new  Point[bluePoints.size()]), 1);
+			return;
+		}
+
+		if (isRed) {
+			if (!isPressed) {
+				if (redPoints.size() > 0) {
+					if (redTrack) {
+						redPoints.set(redPoints.size()-1, canvas.toControl(display.getCursorLocation()));
+					}
+					if (redDelete) {
+						redPoints.remove((redPoints.size()-1));
+						redDelete = false;
+						redTrack = false;
+					}
+				}
+				return;
+			}
+			/*
+			if (redDelete) {
+				//redPoints.clear();
+				redDelete = false;
+				//fill.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				//fill.fillRectangle(0, 0, canvas.getBounds().width /2, canvas.getBounds().height);
+				//fill2.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				//fill2.fillRectangle(0, 0, canvas_1.getBounds().width /2, canvas_1.getBounds().height);
+			
+			}
+			*/
+			if (drawMode == 2) {
+				redPoints.add(new Point((int) canvas.toControl(display.getCursorLocation()).x, (int) MathUtils.round(canvas.toControl(display.getCursorLocation()).y, -1) ));
+			}
+			else {
+				if (redPoints.size() > 1) {
+					if (canvas.toControl(display.getCursorLocation()).x != redPoints.get(redPoints.size()-2).x + 1) {
+						int steps = 1;
+						
+						int count = canvas.toControl(display.getCursorLocation()).x - redPoints.get(redPoints.size()-2).x;
+						System.out.println(count);
+						for (int i = 1; i <= count; i++ ) {
+							redPoints.add(new Point(redPoints.get(redPoints.size()-1).x + 1, (canvas.toControl(display.getCursorLocation()).y - redPoints.size()-2)/count));
+							//System.out.println(redPoints.get(redPoints.size()-2));
+						}
+					}
+					System.out.println("free");
+				}
+				else {
+					redPoints.add(canvas.toControl(display.getCursorLocation()));
+				}
+				redTrack = true;
+				blueTrack = false;
+			}
+			if (redPoints.size() > 1) {
+				if(redPoints.get(redPoints.size()-1).x < redPoints.get(redPoints.size()-2).x) {
+					redPoints.get(redPoints.size()-1).x = redPoints.get(redPoints.size()-2).x;
+				}
+				if (redPoints.get(redPoints.size()-1).x > canvas.getBounds().width /2) {
+					redPoints.get(redPoints.size()-1).x = canvas.getBounds().width /2;
+				}
+			}
+			if (redPoints.get(0).x > canvas.getBounds().width /2) {
+				redPoints.get(0).x = canvas.getBounds().width /2;
+			}
+		}
+		else {
+			/*
+			if (blueDelete) {
+				bluePoints.clear();
+				blueDelete = false;
+				//fill.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				//fill.fillRectangle(canvas.getBounds().width /2, 0, 1000, 1000);
+				//fill2.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
+				//fill2.fillRectangle(canvas_1.getBounds().width /2, 0, 1000, 1000);
+				
+			}
+			*/
+			if (!isPressed) {
+				if (bluePoints.size() > 0) {
+					if (blueTrack) {
+						bluePoints.set(bluePoints.size()-1, canvas.toControl(display.getCursorLocation()));
+					}
+					if (blueDelete) {
+						bluePoints.remove((bluePoints.size()-1));
+						blueDelete = false;
+						blueTrack = false;
+					}
+					
+				return;
+				}
+			}
+			if (drawMode == 2) {
+				bluePoints.add(new Point((int) canvas.toControl(display.getCursorLocation()).x, (int) MathUtils.round(canvas.toControl(display.getCursorLocation()).y, -1) ));
+			}
+			else {
+				bluePoints.add(canvas.toControl(display.getCursorLocation()));
+				blueTrack = true;
+				redTrack = false;
+			}
+			if (bluePoints.size() > 1) {
+				if(bluePoints.get(bluePoints.size()-1).x < bluePoints.get(bluePoints.size()-2).x) {
+					bluePoints.get(bluePoints.size()-1).x = bluePoints.get(bluePoints.size()-2).x;
+				}
+				if (bluePoints.get(bluePoints.size()-1).x < canvas.getBounds().width /2) {
+					bluePoints.get(bluePoints.size()-1).x = canvas.getBounds().width /2;
+				}
+			}
+			if (bluePoints.get(0).x < canvas.getBounds().width /2) {
+				bluePoints.get(0).x = canvas.getBounds().width /2;
+			}
+		}
+		//fill2.dispose();
+		
+		//renderLine(redPoints.toArray(new Point[redPoints.size()]), bluePoints.toArray(new  Point[bluePoints.size()]), null);
+		
+	}
+	public void renderLine(Point[] redPoints, Point [] bluePoints, Point [] interference) {	
+		if (!isMoving && !isPressed) {
+			return;
+		}
+		canvas.update();
+		canvas.redraw();
+		
+	}
+	
+	public void moveLines(Point[] redPoints, Point [] bluePoints, int increment) {
+		int longestLine;
+		int otherLine;
+		boolean redLong;
+		interference.clear();
+		
+		if (redPoints.length > bluePoints.length) {
+			longestLine = redPoints.length;
+			otherLine = bluePoints.length;
+			redLong = true;
+		}
+		else {
+			longestLine = bluePoints.length;
+			otherLine = redPoints.length;
+			redLong = false;
+		}
+		
+		for (int i = 0; i < redPoints.length; i++) {
+			redPoints[i].x += increment;
+		}
+		for (int i = 0; i < bluePoints.length; i++) {
+			bluePoints[i].x -= increment;
+
+		}
+		scale2.setSelection(scale2.getSelection() + 1);
+		sliderValue = scale2.getSelection();
+		
+		for (int i = 0; i < longestLine; i++) {
+			for (int k = 0; k < otherLine; k++) {
+				if (redLong) {
+					//System.out.println("stuff");
+					if (i < redPoints.length-1 && k < bluePoints.length - 1) {
+						if (redPoints[i].x == bluePoints[k].x){
+							int y = (int)(redPoints[i].y-(canvas.getBounds().height)/2)*-1 + (bluePoints[k].y-(canvas.getBounds().height)/2)*-1;
+							y *= -1;
+							y += ((canvas.getBounds().height)/2);
+							interference.add(new Point (redPoints[i].x, y));
+							
+						}
+					}
+				}
+				if (!redLong) {
+					
+					if (i < bluePoints.length-1 && k < redPoints.length - 1) {
+						if (redPoints[k].x == bluePoints[i].x){
+							int y = (int)(bluePoints[i].y-(canvas.getBounds().height)/2)*-1 + (redPoints[k].y-(canvas.getBounds().height)/2)*-1;
+							y *= -1;
+							y += ((canvas.getBounds().height)/2);
+							interference.add(new Point (bluePoints[i].x, y));
+						}
+					}
+				}
+			}
+		}
+		//renderLine(redPoints,bluePoints, interference.toArray(new Point[interference.size()]));
+		try {
+		    Thread.sleep(scale.getSelection());                 //1000 milliseconds is one second.
+		} catch(InterruptedException ex) {
+		    Thread.currentThread().interrupt();
+		}
+	}
+	public void sliderChecker () {
+		//if (isPaused) {
+		if (scale2.getSelection() < 0 ) {
+			scale2.setSelection(0);
+		}
+		if (scale2.getSelection() > 1000 ) {
+			scale2.setSelection(1000);
+		}
+		if (scale2.getSelection() != sliderValue) {
+			moveLines(redPoints.toArray(new Point[redPoints.size()]), bluePoints.toArray(new  Point[bluePoints.size()]), scale2.getSelection() - sliderValue);
+			sliderValue = scale2.getSelection();
+		}
+		//}
+	}
+	public void drawEquation() {
+		
+		if (isMoving) {
+			moveLines(redPoints.toArray(new Point[redPoints.size()]), bluePoints.toArray(new  Point[bluePoints.size()]), 1);
+			//System.out.println("test");
+			return;
+		}
+		if (isPaused) {
+			return;
+		}
+		
+		bluePoints.clear();
+		redPoints.clear();
+		interference.clear();
+		
+		int redAmplitude;
+		int redPeriod;
+		int redHorShift;
+		int redVertShift;
+		
+		int blueAmplitude;
+		int bluePeriod;
+		int blueHorShift;
+		int blueVertShift;
+		
+		try {
+			redAmplitude = Integer.parseInt(redAmp.getText());
+		} catch (NumberFormatException e) {
+			redAmplitude = 1;
+		}
+		try {
+			redPeriod = (int)(20*(2*Math.PI)/(Double.parseDouble(redPer.getText()) *(Math.PI * 1)));
+		} catch (NumberFormatException e) {
+			redPeriod = 20;
+		}
+		
+		try {
+			redHorShift = Integer.parseInt(redHor.getText()) * -1;
+		} catch (NumberFormatException e) {
+			redHorShift = 0;
+		}
+		
+		try {
+			redVertShift = Integer.parseInt(redVert.getText()) * -1;
+		
+		} catch (NumberFormatException e) {
+			redVertShift = 0;
+		}
+		
+		//BLUE WAVES
+		try {
+			blueAmplitude = Integer.parseInt(blueAmp.getText());
+		} catch (NumberFormatException e) {
+			blueAmplitude = 1;
+		}
+		try {
+			bluePeriod = (int)(20*(2*Math.PI)/(Double.parseDouble(bluePer.getText()) *(Math.PI * 1)));
+		} catch (NumberFormatException e) {
+			bluePeriod = 20;
+		}
+		
+		try {
+			blueHorShift = Integer.parseInt(blueHor.getText()) * -1;
+		} catch (NumberFormatException e) {
+			blueHorShift = 0;
+		}
+		
+		try {
+			blueVertShift = Integer.parseInt(blueVert.getText()) * -1;
+		
+		} catch (NumberFormatException e) {
+			blueVertShift = 0;
+		}
+		
+		for (int i = 0; i < canvas.getBounds().width/2; i++) {
+			redPoints.add(new Point(i, (int)(10*redAmplitude*Math.sin(Math.toRadians((redPeriod*(i+redHorShift * 3)))) + canvas.getBounds().height/2 + redVertShift * 3)));
+		}
+		
+		for (int i = canvas.getBounds().width/2; i < canvas.getBounds().width; i++) {
+			bluePoints.add(new Point(i, (int)(10*blueAmplitude*Math.sin(Math.toRadians((bluePeriod*(i+blueHorShift * 3)))) + canvas.getBounds().height/2 + blueVertShift * 3)));
+		}
+		
+		
+	}
+}
